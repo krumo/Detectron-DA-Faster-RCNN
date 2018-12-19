@@ -70,6 +70,15 @@ cfg = __C
 # ---------------------------------------------------------------------------- #
 __C.TRAIN = AttrDict()
 
+__C.TRAIN.DOMAIN_ADAPTATION = False
+__C.TRAIN.DA_IMG_GRL_WEIGHT = 0.1
+__C.TRAIN.DA_INS_GRL_WEIGHT = 0.1
+
+__C.TRAIN.SOURCE_DATASETS = ()
+__C.TRAIN.TARGET_DATASETS = ()
+__C.TRAIN.SOURCE_PROPOSAL_FILES = ()
+__C.TRAIN.TARGET_PROPOSAL_FILES = ()
+
 # Initialize network with weights from this .pkl file
 __C.TRAIN.WEIGHTS = ''
 

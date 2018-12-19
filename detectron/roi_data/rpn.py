@@ -56,6 +56,8 @@ def get_rpn_blob_names(is_training=True):
                 'rpn_bbox_inside_weights_wide',
                 'rpn_bbox_outside_weights_wide'
             ]
+        if cfg.TRAIN.DOMAIN_ADAPTATION:
+            blob_names += ['is_source']
     return blob_names
 
 
@@ -92,6 +94,12 @@ def add_rpn_blobs(blobs, im_scales, roidb):
         im_info = np.array([[im_height, im_width, scale]], dtype=np.float32)
         blobs['im_info'].append(im_info)
 
+        if cfg.TRAIN.DOMAIN_ADAPTATION: 
+            if entry['is_source']:
+                blobs['is_source'].append(np.full((1,),True,dtype=np.bool_))     
+            else:
+                blobs['is_source'].append(np.full((1,),False,dtype=np.bool_))
+
         # Add RPN targets
         if cfg.FPN.FPN_ON and cfg.FPN.MULTILEVEL_RPN:
             # RPN applied to many feature levels, as in the FPN paper
@@ -117,6 +125,8 @@ def add_rpn_blobs(blobs, im_scales, roidb):
         'has_visible_keypoints', 'boxes', 'segms', 'seg_areas', 'gt_classes',
         'gt_overlaps', 'is_crowd', 'box_to_gt_ind_map', 'gt_keypoints'
     ]
+    if cfg.TRAIN.DOMAIN_ADAPTATION:
+        valid_keys+=['is_source']
     minimal_roidb = [{} for _ in range(len(roidb))]
     for i, e in enumerate(roidb):
         for k in valid_keys:

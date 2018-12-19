@@ -201,6 +201,46 @@ _DATASETS = {
             _DATA_DIR + '/VOC2012/annotations/voc_2012_val.json',
         _DEVKIT_DIR:
             _DATA_DIR + '/VOC2012/VOCdevkit2012'
+    },
+    'foggy_cityscapes_fine_instanceonly_seg_train': {
+        _IM_DIR:
+            _DATA_DIR + '/foggy_cityscapes/images',
+        _ANN_FN:
+            _DATA_DIR + '/foggy_cityscapes/annotations/foggy_instancesonly_filtered_gtFine_train.json',
+        _RAW_DIR:
+            _DATA_DIR + '/foggy_cityscapes/raw'
+    },
+    'foggy_cityscapes_fine_instanceonly_seg_val': {
+        _IM_DIR:
+            _DATA_DIR + '/foggy_cityscapes/images',
+        _ANN_FN:
+            _DATA_DIR + '/foggy_cityscapes/annotations/foggy_instancesonly_filtered_gtFine_val.json',
+        _RAW_DIR:
+            _DATA_DIR + '/foggy_cityscapes/raw'
+    },
+    'kitti_train': {
+        _IM_DIR:
+            _DATA_DIR + '/kitti/training/image_2',
+        _ANN_FN:
+            _DATA_DIR + '/kitti/annotations/kitti_car_more_training.json',
+    },
+    'cityscapes_car_train': {
+        _IM_DIR:
+            _DATA_DIR + '/cityscapes/images',
+        _ANN_FN:
+            _DATA_DIR + '/cityscapes/annotations/caronly_filtered_gtFine_train.json',
+    },
+     'cityscapes_car_val': {
+        _IM_DIR:
+            _DATA_DIR + '/cityscapes/images',
+        _ANN_FN:
+            _DATA_DIR + '/cityscapes/annotations/caronly_filtered_gtFine_val.json',
+    },
+    'sim10k': {
+         _IM_DIR:
+            _DATA_DIR + '/sim10k/JPEGImages',
+        _ANN_FN:
+            _DATA_DIR + '/sim10k/car_instances.json',
     }
 }
 

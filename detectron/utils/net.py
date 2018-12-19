@@ -216,7 +216,10 @@ def print_net(model, namescope='gpu_0'):
         input_name = op.input
         # For simplicity: only print the first output
         # Not recommended if there are split layers
-        output_name = str(op.output[0])
+        try:
+            output_name = str(op.output[0])
+        except BaseException:
+            output_name = '<nothing>'
         op_type = op.type
         op_name = op.name
 

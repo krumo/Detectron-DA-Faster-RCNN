@@ -246,8 +246,11 @@ def _log_detection_eval_metrics(json_dataset, coco_eval):
         # minus 1 because of __background__
         precision = coco_eval.eval['precision'][
             ind_lo:(ind_hi + 1), :, cls_ind - 1, 0, 2]
+        pascal_precision = coco_eval.eval['precision'][
+            ind_lo, :, cls_ind - 1, 0, 2]
         ap = np.mean(precision[precision > -1])
-        logger.info('{:.1f}'.format(100 * ap))
+        pascal_ap = np.mean(pascal_precision[pascal_precision > -1])
+        logger.info('{:.1f} '.format(cls_ind)+cls+' AP: {:.1f}'.format(100 * ap)+' AP50: {:.1f}'.format(100 * pascal_ap))
     logger.info('~~~~ Summary metrics ~~~~')
     coco_eval.summarize()
 

@@ -102,6 +102,14 @@ def get_fast_rcnn_blob_names(is_training=True):
                 for lvl in range(k_min, k_max + 1):
                     blob_names += ['keypoint_rois_fpn' + str(lvl)]
                 blob_names += ['keypoint_rois_idx_restore_int32']
+    if is_training and cfg.TRAIN.DOMAIN_ADAPTATION:
+        blob_names += ['dc_label']
+        blob_names += ['label_mask']
+        blob_names += ['source_labels_int32']
+        blob_names += ['source_bbox_targets']
+        blob_names += ['source_bbox_inside_weights']
+        blob_names += ['source_bbox_outside_weights']
+        blob_names += ['da_label_wide']
     return blob_names
 
 
@@ -202,6 +210,21 @@ def _sample_rois(roidb, im_scale, batch_idx):
         keypoint_rcnn_roi_data.add_keypoint_rcnn_blobs(
             blob_dict, roidb, fg_rois_per_image, fg_inds, im_scale, batch_idx
         )
+    
+    # optionally add Domain Adaptive R-CNN blobs
+    if cfg.TRAIN.DOMAIN_ADAPTATION:
+        if roidb['is_source']:
+            blob_dict['dc_label'] = np.expand_dims(np.ones(blob_dict['labels_int32'].shape, dtype=blob_dict['labels_int32'].dtype), axis=1)
+            blob_dict['label_mask'] = np.full(blob_dict['labels_int32'].shape, True)
+            blob_dict['source_labels_int32'] = blob_dict['labels_int32']
+            blob_dict['source_bbox_targets'] = blob_dict['bbox_targets']
+            blob_dict['source_bbox_inside_weights'] = blob_dict['bbox_inside_weights']
+            blob_dict['source_bbox_outside_weights'] = blob_dict['bbox_outside_weights']
+            blob_dict['da_label_wide'] = np.ones((1,1,200, 400), dtype=np.int32)
+        else:
+            blob_dict['dc_label'] = np.expand_dims(np.zeros(blob_dict['labels_int32'].shape, dtype=blob_dict['labels_int32'].dtype), axis=1)
+            blob_dict['label_mask'] = np.full(blob_dict['labels_int32'].shape, False)
+            blob_dict['da_label_wide'] = np.zeros((1,1,200, 400), dtype=np.int32)
 
     return blob_dict
 

@@ -1,0 +1,39 @@
+MODEL:
+  TYPE: generalized_rcnn
+  CONV_BODY: VGG16.add_VGG16_conv5_body
+  NUM_CLASSES: 2
+  FASTER_RCNN: True
+NUM_GPUS: 1
+SOLVER:
+  WEIGHT_DECAY: 0.0005
+  LR_POLICY: steps_with_decay
+  BASE_LR: 0.001
+  GAMMA: 0.1
+  MAX_ITER: 70000
+  WARM_UP_ITERS: 0
+  STEPS: [0, 50000]
+RPN:
+  SIZES: (128, 256, 512)
+FAST_RCNN:
+  ROI_BOX_HEAD: VGG16.add_VGG16_roi_fc_head
+TRAIN:
+  DOMAIN_ADAPTATION: True
+  DA_IMG_GRL_WEIGHT: 0.2
+  DA_INS_GRL_WEIGHT: 0.2
+  WEIGHTS: /home/user/models/vgg16v2.pkl
+  SOURCE_DATASETS: ('sim10k',)
+  TARGET_DATASETS: ('cityscapes_car_train',)
+  SCALES: (800,)
+  MAX_SIZE: 1600
+  IMS_PER_BATCH: 2
+  BATCH_SIZE_PER_IM: 256
+  RPN_MIN_SIZE: 16
+TEST:
+  DATASETS: ('sim10k','cityscapes_car_val',)
+  SCALE: 800
+  MAX_SIZE: 1600
+  RPN_PRE_NMS_TOP_N: 6000  # Per FPN level
+  RPN_POST_NMS_TOP_N: 300
+  FORCE_JSON_DATASET_EVAL: True
+  RPN_MIN_SIZE: 16
+OUTPUT_DIR: .

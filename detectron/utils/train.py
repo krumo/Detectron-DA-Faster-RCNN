@@ -167,7 +167,10 @@ def optimize_memory(model):
 def setup_model_for_training(model, weights_file, output_dir):
     """Loaded saved weights and create the network in the C2 workspace."""
     logger = logging.getLogger(__name__)
-    add_model_training_inputs(model)
+    if cfg.TRAIN.DOMAIN_ADAPTATION:
+        add_model_da_training_inputs(model)
+    else:
+        add_model_training_inputs(model)
 
     if weights_file:
         # Override random weight initialization with weights from a saved model
@@ -194,8 +197,24 @@ def add_model_training_inputs(model):
         cfg.TRAIN.DATASETS, cfg.TRAIN.PROPOSAL_FILES
     )
     logger.info('{:d} roidb entries'.format(len(roidb)))
-    model_builder.add_training_inputs(model, roidb=roidb)
+    model_builder.add_training_inputs(model, source_roidb=roidb)
 
+def add_model_da_training_inputs(model):
+    """Load the training dataset and attach the training inputs to the model."""
+    logger = logging.getLogger(__name__)
+    logger.info('Loading source dataset: {}'.format(cfg.TRAIN.SOURCE_DATASETS))
+    source_roidb = combined_roidb_for_training(
+        cfg.TRAIN.SOURCE_DATASETS, cfg.TRAIN.SOURCE_PROPOSAL_FILES, True
+    )
+    logger.info('{:d} source roidb entries'.format(len(source_roidb)))
+    
+    logger.info('Loading target dataset: {}'.format(cfg.TRAIN.TARGET_DATASETS))
+    target_roidb = combined_roidb_for_training(
+        cfg.TRAIN.TARGET_DATASETS, cfg.TRAIN.TARGET_PROPOSAL_FILES, False
+    )
+    logger.info('{:d} target roidb entries'.format(len(target_roidb)))
+    roidb = source_roidb+target_roidb
+    model_builder.add_training_inputs(model, source_roidb=source_roidb, target_roidb=target_roidb)
 
 def dump_proto_files(model, output_dir):
     """Save prototxt descriptions of the training network and parameter

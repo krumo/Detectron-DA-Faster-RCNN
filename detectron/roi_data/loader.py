@@ -66,15 +66,20 @@ logger = logging.getLogger(__name__)
 class RoIDataLoader(object):
     def __init__(
         self,
-        roidb,
+        source_roidb,
+        target_roidb=None,
         num_loaders=4,
         minibatch_queue_size=64,
         blobs_queue_capacity=8
     ):
-        self._roidb = roidb
+        self._roidb = source_roidb
+        self._target_roidb = target_roidb
         self._lock = threading.Lock()
         self._perm = deque(range(len(self._roidb)))
+        if target_roidb != None:
+            self._target_perm = deque(range(len(self._target_roidb)))
         self._cur = 0  # _perm cursor
+        self._target_cur = 0  # _target_perm cursor
         # The minibatch queue holds prepared training data in host (CPU) memory
         # When training with N > 1 GPUs, each element in the minibatch queue
         # is actually a partial minibatch which contributes 1 / N of the
@@ -103,9 +108,9 @@ class RoIDataLoader(object):
                 # self.get_output_names
                 ordered_blobs = OrderedDict()
                 for key in self.get_output_names():
-                    assert blobs[key].dtype in (np.int32, np.float32), \
+                    assert blobs[key].dtype in (np.int32, np.float32,  np.bool_), \
                         'Blob {} of dtype {} must have dtype of ' \
-                        'np.int32 or np.float32'.format(key, blobs[key].dtype)
+                        'np.int32 or np.float32 or  np.bool_'.format(key, blobs[key].dtype)
                     ordered_blobs[key] = blobs[key]
                 coordinated_put(
                     self.coordinator, self._minibatch_queue, ordered_blobs
@@ -129,8 +134,11 @@ class RoIDataLoader(object):
         """Return the blobs to be used for the next minibatch. Thread safe."""
         valid = False
         while not valid:
-            db_inds = self._get_next_minibatch_inds()
+            db_inds, db_target_inds = self._get_next_minibatch_inds()
             minibatch_db = [self._roidb[i] for i in db_inds]
+            if db_target_inds != None:
+                minibatch_db += [self._target_roidb[i] for i in db_target_inds]
+                print("target minibatch loaded: "+str(db_inds[0])+" "+str(db_target_inds[0]))
             blobs, valid = get_minibatch(minibatch_db)
         return blobs
 
@@ -147,6 +155,8 @@ class RoIDataLoader(object):
             horz_inds = np.random.permutation(horz_inds)
             vert_inds = np.random.permutation(vert_inds)
             mb = cfg.TRAIN.IMS_PER_BATCH
+            if self._target_roidb != None:
+                mb = cfg.TRAIN.IMS_PER_BATCH//2
             horz_inds = horz_inds[:(len(horz_inds) // mb) * mb]
             vert_inds = vert_inds[:(len(vert_inds) // mb) * mb]
             inds = np.hstack((horz_inds, vert_inds))
@@ -155,10 +165,35 @@ class RoIDataLoader(object):
             row_perm = np.random.permutation(np.arange(inds.shape[0]))
             inds = np.reshape(inds[row_perm, :], (-1, ))
             self._perm = inds
+            if self._target_roidb != None:
+                widths = np.array([r['width'] for r in self._target_roidb])
+                heights = np.array([r['height'] for r in self._target_roidb])
+                horz = (widths >= heights)
+                vert = np.logical_not(horz)
+                horz_inds = np.where(horz)[0]
+                vert_inds = np.where(vert)[0]
+
+                horz_inds = np.random.permutation(horz_inds)
+                vert_inds = np.random.permutation(vert_inds)
+                mb = cfg.TRAIN.IMS_PER_BATCH-cfg.TRAIN.IMS_PER_BATCH//2
+                horz_inds = horz_inds[:(len(horz_inds) // mb) * mb]
+                vert_inds = vert_inds[:(len(vert_inds) // mb) * mb]
+                inds = np.hstack((horz_inds, vert_inds))
+
+                inds = np.reshape(inds, (-1, mb))
+                row_perm = np.random.permutation(np.arange(inds.shape[0]))
+                inds = np.reshape(inds[row_perm, :], (-1, ))
+                self._target_perm = inds
         else:
             self._perm = np.random.permutation(np.arange(len(self._roidb)))
+            if self._target_roidb != None:
+                self._target_perm = np.random.permutation(
+                    np.arange(len(self._target_roidb)))
         self._perm = deque(self._perm)
+        if self._target_roidb != None:
+            self._target_perm = deque(self._target_perm)
         self._cur = 0
+        self._target_cur = 0
 
     def _get_next_minibatch_inds(self):
         """Return the roidb indices for the next minibatch. Thread safe."""
@@ -167,12 +202,27 @@ class RoIDataLoader(object):
             # followed by *rotating* the deque so that we see fresh items
             # each time. If the length of _perm is not divisible by
             # IMS_PER_BATCH, then we end up wrapping around the permutation.
-            db_inds = [self._perm[i] for i in range(cfg.TRAIN.IMS_PER_BATCH)]
-            self._perm.rotate(-cfg.TRAIN.IMS_PER_BATCH)
-            self._cur += cfg.TRAIN.IMS_PER_BATCH
-            if self._cur >= len(self._perm):
-                self._shuffle_roidb_inds()
-        return db_inds
+            if self._target_roidb == None:
+                db_inds = [self._perm[i]
+                           for i in range(cfg.TRAIN.IMS_PER_BATCH)]
+                self._perm.rotate(-cfg.TRAIN.IMS_PER_BATCH)
+                self._cur += cfg.TRAIN.IMS_PER_BATCH
+                if self._cur >= len(self._perm):
+                    self._shuffle_roidb_inds()
+                db_target_inds = None
+            else:
+                db_inds = [self._perm[i]
+                           for i in range(cfg.TRAIN.IMS_PER_BATCH//2)]
+                db_target_inds = [self._target_perm[i] for i in range(
+                    cfg.TRAIN.IMS_PER_BATCH-cfg.TRAIN.IMS_PER_BATCH//2)]
+                self._perm.rotate(-cfg.TRAIN.IMS_PER_BATCH//2)
+                self._target_perm.rotate(-cfg.TRAIN.IMS_PER_BATCH +
+                                         cfg.TRAIN.IMS_PER_BATCH//2)
+                self._cur += cfg.TRAIN.IMS_PER_BATCH//2
+                self._target_cur += cfg.TRAIN.IMS_PER_BATCH-cfg.TRAIN.IMS_PER_BATCH//2
+                if self._cur >= len(self._perm) or self._target_cur >= len(self._target_perm):
+                    self._shuffle_roidb_inds()
+        return db_inds, db_target_inds
 
     def get_output_names(self):
         return self._output_names

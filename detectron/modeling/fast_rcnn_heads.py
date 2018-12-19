@@ -74,20 +74,38 @@ def add_fast_rcnn_outputs(model, blob_in, dim):
 
 def add_fast_rcnn_losses(model):
     """Add losses for RoI classification and bounding box regression."""
-    cls_prob, loss_cls = model.net.SoftmaxWithLoss(
-        ['cls_score', 'labels_int32'], ['cls_prob', 'loss_cls'],
-        scale=model.GetLossScale()
-    )
-    loss_bbox = model.net.SmoothL1Loss(
-        [
-            'bbox_pred', 'bbox_targets', 'bbox_inside_weights',
-            'bbox_outside_weights'
-        ],
-        'loss_bbox',
-        scale=model.GetLossScale()
-    )
-    loss_gradients = blob_utils.get_loss_gradients(model, [loss_cls, loss_bbox])
-    model.Accuracy(['cls_prob', 'labels_int32'], 'accuracy_cls')
+    if cfg.TRAIN.DOMAIN_ADAPTATION:
+        model.MaskingInput(['cls_score', 'label_mask'], ['source_cls_score'])
+        model.MaskingInput(['bbox_pred', 'label_mask'], ['source_bbox_pred'])
+
+        cls_prob, loss_cls = model.net.SoftmaxWithLoss(
+            ['source_cls_score', 'source_labels_int32'], ['cls_prob', 'loss_cls'],
+            scale=model.GetLossScale()
+        )
+        loss_bbox = model.net.SmoothL1Loss(
+            [
+                'source_bbox_pred', 'source_bbox_targets', 'source_bbox_inside_weights',
+                'source_bbox_outside_weights'
+            ],
+            'loss_bbox',
+            scale=model.GetLossScale()
+        )
+        model.Accuracy(['cls_prob', 'source_labels_int32'], 'accuracy_cls')
+    else:
+        cls_prob, loss_cls = model.net.SoftmaxWithLoss(
+            ['cls_score', 'labels_int32'], ['cls_prob',     'loss_cls'],
+            scale=model.GetLossScale()
+        )
+        loss_bbox = model.net.SmoothL1Loss(
+            [
+                'bbox_pred', 'bbox_targets',    'bbox_inside_weights',
+                'bbox_outside_weights'
+            ],
+            'loss_bbox',
+            scale=model.GetLossScale()
+        )
+        model.Accuracy(['cls_prob', 'labels_int32'], 'accuracy_cls')
+    loss_gradients = blob_utils.get_loss_gradients(model,   [loss_cls, loss_bbox])
     model.AddLosses(['loss_cls', 'loss_bbox'])
     model.AddMetrics('accuracy_cls')
     return loss_gradients

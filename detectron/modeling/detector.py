@@ -36,6 +36,7 @@ from detectron.ops.generate_proposal_labels import GenerateProposalLabelsOp
 from detectron.ops.generate_proposals import GenerateProposalsOp
 import detectron.roi_data.fast_rcnn as fast_rcnn_roi_data
 import detectron.utils.c2 as c2_utils
+from caffe2.proto import caffe2_pb2
 
 logger = logging.getLogger(__name__)
 
@@ -334,6 +335,93 @@ class DetectionModelHelper(cnn.CNNModelHelper):
         return self.net.Conv(
             blobs_in, blob_out, kernel=kernel, order=self.order, **kwargs
         )
+
+    def FCShared(
+        self,
+        blob_in,
+        blob_out,
+        dim_in,
+        dim_hidden,
+        weight=None,
+        bias=None,
+        **kwargs
+    ):
+        """Add fully connected op that shares weights and/or biases with another fully connected op.
+        """
+        use_bias = (
+            False if ('no_bias' in kwargs and kwargs['no_bias']) else True
+        )
+        use_bias = True
+
+        if self.use_cudnn:
+            kwargs['engine'] = 'CUDNN'
+            kwargs['exhaustive_search'] = self.cudnn_exhaustive_search
+            if self.ws_nbytes_limit:
+                kwargs['ws_nbytes_limit'] = self.ws_nbytes_limit
+
+        if use_bias:
+            blobs_in = [blob_in, weight, bias]
+        else:
+            blobs_in = [blob_in, weight]
+
+        if 'no_bias' in kwargs:
+            del kwargs['no_bias']
+
+        return self.net.FC(
+            blobs_in,
+            blob_out,
+            dim_in=dim_in,
+            dim_hidden=dim_hidden,
+            **kwargs
+        )
+    
+    def MaskingInput(self, blobs_in, blob_out, needs_int32_init=False):
+        """
+        mask input according to the argument mask, implemented for domain adaptation component
+        blobs_in: [input_vector, input_mask]
+        blobs_out: masked_input_vector
+        """
+        def mask(inputs, outputs):
+            scores = inputs[0].data
+            source_mask = inputs[1].data.astype(bool)
+            scores = scores[source_mask, :]
+            if needs_int32_init:
+                outputs[0].init(list(scores.shape), caffe2_pb2.TensorProto.INT32)
+            else:
+                outputs[0].reshape(scores.shape)
+            # print(outputs[0].shape)
+            outputs[0].data[...] = scores
+        def grad_mask(inputs, outputs):
+            source_mask = inputs[1].data.astype(bool)
+            grad_output = inputs[3]
+            grad_input = outputs[0]
+            grad_input.reshape(inputs[0].shape)
+            import numpy as np
+            grads = np.zeros(inputs[0].shape)
+            grads[source_mask, :] = grad_output.data
+            grad_input.data[...] = grads
+        name = 'MaskingInput:' + ','.join(
+            [str(b) for b in blobs_in]
+        )
+
+        output = self.net.Python(f=mask, grad_f=grad_mask, grad_input_indices=[0])(blobs_in, blob_out, name=name)
+
+        return output
+    
+    def GradientScalerLayer(self, blob_in, blob_out, scale):
+        def gradScale(inputs, outputs):
+            outputs[0].feed(inputs[0].data)
+        def grad_gradScale(inputs, outputs):
+            grad_output = inputs[-1]
+            outputs[0].reshape(grad_output.shape)
+            outputs[0].data[...] = scale*grad_output.data
+        name = 'GradientScalerLayer:' + ','.join(
+            [str(b) for b in blob_in]
+        ) + ' with scale ' + str(scale)
+
+        output = self.net.Python(f=gradScale, grad_f=grad_gradScale, grad_input_indices=[0], grad_output_indices=[0])(blob_in, blob_out, name=name)
+
+        return output
 
     def BilinearInterpolation(
         self, blob_in, blob_out, dim_in, dim_out, up_scale

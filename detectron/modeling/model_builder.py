@@ -55,6 +55,7 @@ import detectron.modeling.rfcn_heads as rfcn_heads
 import detectron.modeling.rpn_heads as rpn_heads
 import detectron.roi_data.minibatch as roi_data_minibatch
 import detectron.utils.c2 as c2_utils
+import detectron.utils.blob as blob_utils
 
 logger = logging.getLogger(__name__)
 
@@ -181,6 +182,9 @@ def build_generic_detection_model(
             'box': None,
             'mask': None,
             'keypoints': None,
+            'image': None,
+            'instance': None,
+            'consistency': None,
         }
 
         if cfg.RPN.RPN_ON:
@@ -198,7 +202,7 @@ def build_generic_detection_model(
 
         if not cfg.MODEL.RPN_ONLY:
             # Add the Fast R-CNN head
-            head_loss_gradients['box'] = _add_fast_rcnn_head(
+            head_loss_gradients['box'], blob_feats_rois_all, dim_feats_rois_all = _add_fast_rcnn_head(
                 model, add_roi_box_head_func, blob_conv, dim_conv,
                 spatial_scale_conv
             )
@@ -216,6 +220,14 @@ def build_generic_detection_model(
                 model, add_roi_keypoint_head_func, blob_conv, dim_conv,
                 spatial_scale_conv
             )
+        
+        if cfg.TRAIN.DOMAIN_ADAPTATION:
+            # Add Image-level loss
+            head_loss_gradients['image'] = _add_image_level_classifier(model, blob_conv, dim_conv, spatial_scale_conv)
+            # Add Instance-level loss
+            head_loss_gradients['instance'] = _add_instance_level_classifier(model, blob_feats_rois_all, dim_feats_rois_all)
+            # Add consistency regularization
+            head_loss_gradients['consistency'] = _add_consistency_loss(model, blob_conv, dim_conv, blob_feats_rois_all, dim_feats_rois_all)
 
         if model.train:
             loss_gradients = {}
@@ -228,6 +240,136 @@ def build_generic_detection_model(
 
     optim.build_data_parallel_model(model, _single_gpu_build_func)
     return model
+
+def _add_image_level_classifier(model, blob_in, dim_in, spatial_scale_in):
+    from detectron.utils.c2 import const_fill
+    from detectron.utils.c2 import gauss_fill
+    
+    def negateGrad(inputs, outputs):
+        outputs[0].feed(inputs[0].data)
+    def grad_negateGrad(inputs, outputs):
+        scale = cfg.TRAIN.DA_IMG_GRL_WEIGHT
+        grad_output = inputs[-1]
+        outputs[0].reshape(grad_output.shape)
+        outputs[0].data[...] = -1.0*scale*grad_output.data
+    
+    model.GradientScalerLayer([blob_in], ['da_grl'], -1.0*cfg.TRAIN.DA_IMG_GRL_WEIGHT)
+    model.Conv('da_grl', 'da_conv_1', dim_in, 512, kernel=1, pad=0, stride=1, weight_init=gauss_fill(0.001), bias_init=const_fill(0.0))    
+    model.Relu('da_conv_1', 'da_conv_1')
+    model.Conv('da_conv_1', 'da_conv_2',
+        512,
+        1,
+        kernel=1,
+        pad=0,
+        stride=1,
+        weight_init=gauss_fill(0.001),
+        bias_init=const_fill(0.0)
+    )
+    if model.train:
+        model.net.SpatialNarrowAs(
+            ['da_label_wide', 'da_conv_2'], 'da_label'
+        )
+        loss_da = model.net.SigmoidCrossEntropyLoss(
+            ['da_conv_2', 'da_label'],
+            'loss_da',
+            scale=model.GetLossScale()
+        )
+        loss_gradient = blob_utils.get_loss_gradients(model, [loss_da])
+        model.AddLosses('loss_da')
+        return loss_gradient
+    else:
+        return None
+
+def _add_instance_level_classifier(model, blob_in, dim_in):
+    from detectron.utils.c2 import const_fill
+    from detectron.utils.c2 import gauss_fill
+
+    def negateGrad(inputs, outputs):
+        outputs[0].feed(inputs[0].data)
+    def grad_negateGrad(inputs, outputs):
+        scale = cfg.TRAIN.DA_INS_GRL_WEIGHT
+        grad_output = inputs[-1]
+        outputs[0].reshape(grad_output.shape)
+        outputs[0].data[...] = -1.0*scale*grad_output.data
+    model.GradientScalerLayer([blob_in], ['dc_grl'], -1.0*cfg.TRAIN.DA_INS_GRL_WEIGHT)
+    model.FC('dc_grl', 'dc_ip1', dim_in, 1024,
+             weight_init=gauss_fill(0.01), bias_init=const_fill(0.0))
+    model.Relu('dc_ip1', 'dc_relu_1')
+    model.Dropout('dc_relu_1', 'dc_drop_1', ratio=0.5, is_test=False)
+
+    model.FC('dc_drop_1', 'dc_ip2', 1024, 1024,
+             weight_init=gauss_fill(0.01), bias_init=const_fill(0.0))
+    model.Relu('dc_ip2', 'dc_relu_2')
+    model.Dropout('dc_relu_2', 'dc_drop_2', ratio=0.5, is_test=False)
+
+    dc_ip3 = model.FC('dc_drop_2', 'dc_ip3', 1024, 1,
+                      weight_init=gauss_fill(0.05), bias_init=const_fill(0.0))
+    loss_gradient = None
+    if model.train:
+        dc_loss = model.net.SigmoidCrossEntropyLoss(
+            [dc_ip3, 'dc_label'],
+            'loss_dc',
+            scale=model.GetLossScale()
+        )
+        loss_gradient = blob_utils.get_loss_gradients(model, [dc_loss])
+        model.AddLosses('loss_dc')
+    return loss_gradient
+
+
+def _add_consistency_loss(model, blob_img_in, img_dim_in, blob_ins_in, ins_dim_in):
+    def expand_as(inputs, outputs):
+        img_prob = inputs[0].data
+        ins_prob = inputs[1].data
+        import numpy as np
+        mean_da_conv = np.mean(img_prob, (1,2,3))
+        print(mean_da_conv)
+        repeated_da_conv = np.expand_dims(np.repeat(
+            mean_da_conv, ins_prob.shape[0]//2), axis=1)
+        outputs[0].feed(repeated_da_conv)
+    def grad_expand_as(inputs, outputs):
+        import numpy as np
+        img_prob = inputs[0].data
+        ins_prob = inputs[1].data
+        grad_output = inputs[3]
+        grad_input = outputs[0]
+        grad_input.reshape(inputs[0].shape)
+        unit = grad_output.shape[0]//2
+        grad_o = grad_output.data[...]
+        grad_i = np.zeros(inputs[0].shape)
+        for i in range(inputs[0].shape[0]):
+            grad_i[i] = np.sum(grad_o[i*unit:(i+1)*unit, 0])*np.ones(grad_i[i].shape).astype(np.float32)/(img_prob.shape[1]*img_prob.shape[2]*img_prob.shape[3])
+        grad_input.data[...] = grad_i
+    
+    model.GradientScalerLayer([blob_img_in], ['da_grl_copy'], 1.0*cfg.TRAIN.DA_IMG_GRL_WEIGHT)
+    model.ConvShared('da_grl_copy', 'da_conv_1_copy', img_dim_in, 512, kernel=1, pad=0, stride=1, weight='da_conv_1_w', bias='da_conv_1_b')
+    model.Relu('da_conv_1_copy', 'da_conv_1_copy')
+    model.ConvShared('da_conv_1_copy', 'da_conv_2_copy', 512, 1, kernel=1, pad=0, stride=1, weight='da_conv_2_w', bias='da_conv_2_b')
+    model.net.Sigmoid('da_conv_2_copy', 'img_probs')
+
+    model.GradientScalerLayer([blob_ins_in], ['dc_grl_copy'], 1.0*cfg.TRAIN.DA_INS_GRL_WEIGHT)
+    model.FCShared('dc_grl_copy', 'dc_ip1_copy', ins_dim_in, 1024,
+          weight='dc_ip1_w', bias='dc_ip1_b')
+    model.Relu('dc_ip1_copy', 'dc_relu_1_copy')
+
+    model.FCShared('dc_relu_1_copy', 'dc_ip2_copy', 1024, 1024,
+          weight='dc_ip2_w', bias='dc_ip2_b')
+    model.Relu('dc_ip2_copy', 'dc_relu_2_copy')
+
+    model.FCShared('dc_relu_2_copy', 'dc_ip3_copy', 1024, 1,
+                   weight='dc_ip3_w', bias='dc_ip3_b')
+    model.net.Sigmoid('dc_ip3_copy', "ins_probs")
+    loss_gradient = None
+    if model.train:
+        model.net.Python(f=expand_as, grad_f=grad_expand_as, grad_input_indices=[0], grad_output_indices=[0])(
+            ['img_probs', 'ins_probs'], ['repeated_img_probs'])
+        dist = model.net.L1Distance(['repeated_img_probs', 'ins_probs'], ['consistency_dist'])
+        # dist = model.net.SquaredL2Distance(['repeated_img_probs', 'ins_probs'], ['consistency_dist'])
+        loss_consistency = model.net.AveragedLoss(dist, 'loss_consistency')
+        loss_gradient = blob_utils.get_loss_gradients(
+            model, [loss_consistency])
+        model.AddLosses('loss_consistency')
+
+    return loss_gradient
 
 
 def _narrow_to_fpn_roi_levels(blobs, spatial_scales):
@@ -258,7 +400,7 @@ def _add_fast_rcnn_head(
         loss_gradients = fast_rcnn_heads.add_fast_rcnn_losses(model)
     else:
         loss_gradients = None
-    return loss_gradients
+    return loss_gradients, blob_frcn, dim_frcn
 
 
 def _add_roi_mask_head(
@@ -365,7 +507,7 @@ def build_generic_retinanet_model(
 # Network inputs
 # ---------------------------------------------------------------------------- #
 
-def add_training_inputs(model, roidb=None):
+def add_training_inputs(model, source_roidb=None, target_roidb=None):
     """Create network input ops and blobs used for training. To be called
     *after* model_builder.create().
     """
@@ -379,10 +521,11 @@ def add_training_inputs(model, roidb=None):
     #   Since we defer input op creation, we need to do a little bit of surgery
     #   to place the input ops at the start of the network op list.
     assert model.train, 'Training inputs can only be added to a trainable model'
-    if roidb is not None:
+    if source_roidb is not None:
         # To make debugging easier you can set cfg.DATA_LOADER.NUM_THREADS = 1
         model.roi_data_loader = RoIDataLoader(
-            roidb,
+            source_roidb=source_roidb,
+            target_roidb=target_roidb,
             num_loaders=cfg.DATA_LOADER.NUM_THREADS,
             minibatch_queue_size=cfg.DATA_LOADER.MINIBATCH_QUEUE_SIZE,
             blobs_queue_capacity=cfg.DATA_LOADER.BLOBS_QUEUE_CAPACITY
