@@ -1,6 +1,6 @@
 # Domain Adaptive Faster R-CNN in Detectron 
 
-This is a Caffe2 implementation of 'Domain Adaptive Faster R-CNN for Object Detection in the Wild', implemented by Haoran Wang(haowang@student.ethz.ch). The original paper can be found [here](https://arxiv.org/pdf/1803.03243.pdf). This implementation is built on [Detectron](https://github.com/facebookresearch/Detectron) @ [8181a32](https://github.com/facebookresearch/Detectron/tree/8181a324796202e4afe7660b7458b7bf1e08cf8b).
+This is a Caffe2 implementation of 'Domain Adaptive Faster R-CNN for Object Detection in the Wild', implemented by Haoran Wang(haowang@student.ethz.ch). The original paper can be found [here](https://arxiv.org/pdf/1803.03243.pdf). This implementation is built on [Detectron](https://github.com/facebookresearch/Detectron) @ [5ed75f9](https://github.com/facebookresearch/Detectron/commit/5ed75f9d672b3c78b7da92d9b2321d04f33a7ccc).
 
 If you find this repository useful, please cite the oringinal paper:
 
