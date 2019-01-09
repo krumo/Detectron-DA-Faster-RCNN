@@ -322,7 +322,6 @@ def _add_consistency_loss(model, blob_img_in, img_dim_in, blob_ins_in, ins_dim_i
         ins_prob = inputs[1].data
         import numpy as np
         mean_da_conv = np.mean(img_prob, (1,2,3))
-        print(mean_da_conv)
         repeated_da_conv = np.expand_dims(np.repeat(
             mean_da_conv, ins_prob.shape[0]//2), axis=1)
         outputs[0].feed(repeated_da_conv)

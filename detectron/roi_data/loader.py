@@ -138,7 +138,6 @@ class RoIDataLoader(object):
             minibatch_db = [self._roidb[i] for i in db_inds]
             if db_target_inds != None:
                 minibatch_db += [self._target_roidb[i] for i in db_target_inds]
-                print("target minibatch loaded: "+str(db_inds[0])+" "+str(db_target_inds[0]))
             blobs, valid = get_minibatch(minibatch_db)
         return blobs
 
