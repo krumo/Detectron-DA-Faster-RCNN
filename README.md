@@ -1,6 +1,6 @@
 # Domain Adaptive Faster R-CNN in Detectron 
 
-This is a Caffe2 implementation of 'Domain Adaptive Faster R-CNN for Object Detection in the Wild', implemented by Haoran Wang(haowang@student.ethz.ch). The original paper can be found [here](https://arxiv.org/pdf/1803.03243.pdf). This implementation is built on [Detectron](https://github.com/facebookresearch/Detectron) @ [5ed75f9](https://github.com/facebookresearch/Detectron/commit/5ed75f9d672b3c78b7da92d9b2321d04f33a7ccc).
+This is a Caffe2 implementation of 'Domain Adaptive Faster R-CNN for Object Detection in the Wild', implemented by Haoran Wang(haowang@student.ethz.ch). The original paper can be found [here](https://arxiv.org/pdf/1803.03243.pdf). This implementation is built on [Detectron](https://github.com/facebookresearch/Detectron) @ [5ed75f9](https://github.com/facebookresearch/Detectron/tree/5ed75f9d672b3c78b7da92d9b2321d04f33a7ccc).
 
 If you find this repository useful, please cite the oringinal paper:
 
@@ -33,7 +33,7 @@ Please follow the instruction in [Detectron](https://github.com/facebookresearch
 An example of adapting from **Sim10k** dataset to **Cityscapes** dataset is provided:
 1. Download the Cityscapes datasets from [here](https://www.cityscapes-dataset.com/downloads/) and Sim10k datasets from [here](https://fcav.engin.umich.edu/sim-dataset).
 
-2. Convert the labels of Cityscapes datasets and labels of Sim10k datasets to coco format using the scripts 'tools/convert_cityscapes_to_caronly_coco.py' and 'tools/convert_sim10k_to_coco.py'.
+2. Convert the labels of Cityscapes datasets and Sim10k datasets to coco format using the scripts 'tools/convert_cityscapes_to_caronly_coco.py' and 'tools/convert_sim10k_to_coco.py'.
 
 3. Convert ImageNet-pretrained VGG16 Caffe model to Detectron format with 'tools/pickle_caffe_blobs.py' or use my converted VGG16 model in [here](https://drive.google.com/file/d/1nlo6TJt0AwlPIkG8e3aXjdVNdmaLOytg/view?usp=sharing) 
 
@@ -53,12 +53,13 @@ An example of adapting from **Sim10k** dataset to **Cityscapes** dataset is prov
 
 |                  | image                | instsnace            | consistency          | car AP| 
 |------------------|----------------------|----------------------|----------------------|-------|
-| Faster R-CNN     |                      |                      |                      | 32.58 |
-| DA Faster R-CNN  |<ul><li>[x] </li></ul>|                      |                      | 36.13 | 
-| DA Faster R-CNN  |                      |<ul><li>[x] </li></ul>|                      | 36.73 |
-| DA Faster R-CNN  |<ul><li>[x] </li></ul>|<ul><li>[x] </li></ul>|                      | 37.39 | 
-| DA Faster R-CNN  |<ul><li>[x] </li></ul>|<ul><li>[x] </li></ul>|<ul><li>[x] </li></ul>| 38.28 |
+| Faster R-CNN     |||| 32.58 |
+| DA Faster R-CNN  |✓||| 36.13 | 
+| DA Faster R-CNN  ||✓|| 36.73 |
+| DA Faster R-CNN  |✓|✓|| 37.39 | 
+| DA Faster R-CNN  |✓|✓|✓| 38.28 |
 
 ## Other Implementation
 [da-faster-rcnn](https://github.com/yuhuayc/da-faster-rcnn) based on Caffe. (original code by paper authors)
 
+[Domain-Adaptive-Faster-RCNN-PyTorch](https://github.com/krumo/Domain-Adaptive-Faster-RCNN-PyTorch) based on PyTorch and maskrcnn-benchmark.
