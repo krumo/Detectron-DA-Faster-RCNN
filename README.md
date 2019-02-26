@@ -52,12 +52,12 @@ An example of adapting from **Sim10k** dataset to **Cityscapes** dataset is prov
 [Pretrained model](https://polybox.ethz.ch/index.php/s/hOUsBoqsapltDfR) with image+instance+consistency domain adaptation for Sim10k->Cityscapes task.
 
 |                  | image                | instsnace            | consistency          | car AP| 
-|------------------|----------------------|----------------------|----------------------|-------|
-| Faster R-CNN     |||| 32.58 |
-| DA Faster R-CNN  |✓||| 36.13 | 
-| DA Faster R-CNN  ||✓|| 36.73 |
-| DA Faster R-CNN  |✓|✓|| 37.39 | 
-| DA Faster R-CNN  |✓|✓|✓| 38.28 |
+|------------------|:--------------------:|:--------------------:|:--------------------:|:-----:|
+| Faster R-CNN     |                      |                      |                      | 32.58 |
+| DA Faster R-CNN  |✓                     |                      |                      | 36.13 | 
+| DA Faster R-CNN  |                      |✓                     |                      | 36.73 |
+| DA Faster R-CNN  |✓                     |✓                     |                      | 37.39 | 
+| DA Faster R-CNN  |✓                     |✓                     |✓                     | 38.28 |
 
 ## Other Implementation
 [da-faster-rcnn](https://github.com/yuhuayc/da-faster-rcnn) based on Caffe. (original code by paper authors)
