@@ -120,6 +120,8 @@ def add_single_scale_rpn_outputs(model, blob_in, dim_in, spatial_scale):
         else:
             # Alias rois to rpn_rois for inference
             model.net.Alias('rpn_rois', 'rois')
+            # Alias da_rois to rpn_rois for inference
+            model.net.Alias('rpn_rois', 'da_rois')
 
 
 def add_single_scale_rpn_losses(model):
