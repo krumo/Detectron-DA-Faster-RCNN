@@ -49,15 +49,15 @@ An example of adapting from **Sim10k** dataset to **Cityscapes** dataset is prov
 
 ### Pretrained Model & Results
 
-[Pretrained model](https://polybox.ethz.ch/index.php/s/hOUsBoqsapltDfR) with image+instance+consistency domain adaptation for Sim10k->Cityscapes task.
+The best results for different adaptation are reported. Due to the instable nature of adversarial training, the best models are obtained through a model selection on a randomly picked mini validation set.
 
-|                  | image                | instsnace            | consistency          | car AP| 
-|------------------|:--------------------:|:--------------------:|:--------------------:|:-----:|
-| Faster R-CNN     |                      |                      |                      | 32.58 |
-| DA Faster R-CNN  |✓                     |                      |                      | 36.13 | 
-| DA Faster R-CNN  |                      |✓                     |                      | 36.73 |
-| DA Faster R-CNN  |✓                     |✓                     |                      | 37.39 | 
-| DA Faster R-CNN  |✓                     |✓                     |✓                     | 38.28 |
+|                  | image                | instsnace            | consistency          | car AP| Pretrained models|
+|------------------|:--------------------:|:--------------------:|:--------------------:|:-----:|:---:|
+| Faster R-CNN     |                      |                      |                      | 32.58 ||
+| DA Faster R-CNN  |✓                     |                      |                      | 38.60 |[model](https://polybox.ethz.ch/index.php/s/sSasYjKd2mZOiGL)| 
+| DA Faster R-CNN  |                      |✓                     |                      | 35.55 |[model](https://polybox.ethz.ch/index.php/s/rIsd4rup5u35Ym1)|
+| DA Faster R-CNN  |✓                     |✓                     |                      | 39.23 |[model](https://polybox.ethz.ch/index.php/s/He0YvLrAhWB1Amc)| 
+| DA Faster R-CNN  |✓                     |✓                     |✓                     | 40.01 |[model](https://polybox.ethz.ch/index.php/s/apeC2oZ1iPD5dgw)|
 
 ## Other Implementation
 [da-faster-rcnn](https://github.com/yuhuayc/da-faster-rcnn) based on Caffe. (original code by paper authors)

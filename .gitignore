@@ -27,4 +27,8 @@ detectron/utils/cython_*.c
 *.out
 
 # Test data
+train/
 test/
+
+# Model weights
+*.pkl

@@ -17,19 +17,20 @@ RPN:
 FAST_RCNN:
   ROI_BOX_HEAD: VGG16.add_VGG16_roi_fc_head
 TRAIN:
+  SNAPSHOT_ITERS: 2000
   DOMAIN_ADAPTATION: True
-  DA_IMG_GRL_WEIGHT: 0.2
-  DA_INS_GRL_WEIGHT: 0.2
+  DA_IMG_GRL_WEIGHT: 0.1
+  DA_INS_GRL_WEIGHT: 0.1
   WEIGHTS: /home/user/models/vgg16v2.pkl
   SOURCE_DATASETS: ('sim10k',)
-  TARGET_DATASETS: ('cityscapes_car_train',)
+  TARGET_DATASETS: ('cityscapes_car_unlabeled_train',)
   SCALES: (800,)
   MAX_SIZE: 1600
   IMS_PER_BATCH: 2
   BATCH_SIZE_PER_IM: 256
   RPN_MIN_SIZE: 16
 TEST:
-  DATASETS: ('sim10k','cityscapes_car_val',)
+  DATASETS: ('cityscapes_car_val','sim10k')
   SCALE: 800
   MAX_SIZE: 1600
   RPN_PRE_NMS_TOP_N: 6000  # Per FPN level

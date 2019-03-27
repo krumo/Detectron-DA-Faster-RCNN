@@ -230,11 +230,23 @@ _DATASETS = {
         _ANN_FN:
             _DATA_DIR + '/cityscapes/annotations/caronly_filtered_gtFine_train.json',
     },
+    'cityscapes_car_unlabeled_train': {
+        _IM_DIR:
+            _DATA_DIR + '/cityscapes/images',
+        _ANN_FN:
+            _DATA_DIR + '/cityscapes/annotations/caronly_filtered_unlabeled_gtFine_train.json',
+    },
      'cityscapes_car_val': {
         _IM_DIR:
             _DATA_DIR + '/cityscapes/images',
         _ANN_FN:
             _DATA_DIR + '/cityscapes/annotations/caronly_filtered_gtFine_val.json',
+    },
+    'cityscapes_car_minival': {
+        _IM_DIR:
+            _DATA_DIR + '/cityscapes/images',
+        _ANN_FN:
+            _DATA_DIR + '/cityscapes/annotations/caronly_filtered_gtFine_minival.json',
     },
     'sim10k': {
          _IM_DIR:
