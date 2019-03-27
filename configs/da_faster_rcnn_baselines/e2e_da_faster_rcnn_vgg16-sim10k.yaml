@@ -19,8 +19,8 @@ FAST_RCNN:
 TRAIN:
   SNAPSHOT_ITERS: 2000
   DOMAIN_ADAPTATION: True
-  DA_IMG_GRL_WEIGHT: 0.1
-  DA_INS_GRL_WEIGHT: 0.1
+  DA_IMG_GRL_WEIGHT: 0.2
+  DA_INS_GRL_WEIGHT: 0.2
   WEIGHTS: /home/user/models/vgg16v2.pkl
   SOURCE_DATASETS: ('sim10k',)
   TARGET_DATASETS: ('cityscapes_car_unlabeled_train',)
