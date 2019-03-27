@@ -231,8 +231,7 @@ def _sample_rois(roidb, im_scale, batch_idx):
     return blob_dict
 
 def _sample_da_rois(roidb, im_scale, batch_idx):
-    """Generate a random sample of RoIs comprising foreground and background
-    examples.
+    """Generate a random sample of RoIs for domain adaptation.
     """
     max_overlaps = roidb['max_overlaps']
     rois_per_image = min(max_overlaps.shape[0], int(cfg.TRAIN.BATCH_SIZE_PER_IM))
