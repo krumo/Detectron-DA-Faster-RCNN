@@ -62,4 +62,4 @@ The best results for different adaptation are reported. Due to the instable natu
 ## Other Implementation
 [da-faster-rcnn](https://github.com/yuhuayc/da-faster-rcnn) based on Caffe. (original code by paper authors)
 
-[Domain-Adaptive-Faster-RCNN-PyTorch](https://github.com/krumo/Domain-Adaptive-Faster-RCNN-PyTorch) based on PyTorch and maskrcnn-benchmark. (under developing)
+[Domain-Adaptive-Faster-RCNN-PyTorch](https://github.com/krumo/Domain-Adaptive-Faster-RCNN-PyTorch) based on PyTorch and maskrcnn-benchmark.
