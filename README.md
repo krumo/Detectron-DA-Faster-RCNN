@@ -1,5 +1,9 @@
 # Domain Adaptive Faster R-CNN in Detectron 
 
+## Updates
+* Our new paper [Scale-Aware Domain Adaptive Faster R-CNN](https://link.springer.com/article/10.1007/s11263-021-01447-x) has been accepted by IJCV. The corresponding code is maintained under [sa-da-faster](https://github.com/yuhuayc/sa-da-faster).
+
+## Introduction
 This is a Caffe2 implementation of 'Domain Adaptive Faster R-CNN for Object Detection in the Wild', implemented by Haoran Wang(whrzxzero@gmail.com). The original paper can be found [here](https://arxiv.org/pdf/1803.03243.pdf). This implementation is built on [Detectron](https://github.com/facebookresearch/Detectron) @ [5ed75f9](https://github.com/facebookresearch/Detectron/tree/5ed75f9d672b3c78b7da92d9b2321d04f33a7ccc).
 
 If you find this repository useful, please cite the oringinal paper:
@@ -63,3 +67,5 @@ The best results for different adaptation are reported. Due to the instable natu
 [da-faster-rcnn](https://github.com/yuhuayc/da-faster-rcnn) based on Caffe. (original code by paper authors)
 
 [Domain-Adaptive-Faster-RCNN-PyTorch](https://github.com/krumo/Domain-Adaptive-Faster-RCNN-PyTorch) based on PyTorch and maskrcnn-benchmark.
+
+[sa-da-faster](https://github.com/yuhuayc/sa-da-faster) based on PyTorch and maskrcnn-benchmark.
